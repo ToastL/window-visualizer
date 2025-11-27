@@ -13,10 +13,6 @@ export const CONFIG = {
         ACCENT_START: '#06b6d4',
         ACCENT_END: '#8b5cf6',
     },
-    DRIFT: {
-        SPEED: 0.001,
-        AMPLITUDE: 15,
-    },
     RECONNECT_DELAY: 2000,
     MAX_RECONNECT_ATTEMPTS: 10,
 } as const;

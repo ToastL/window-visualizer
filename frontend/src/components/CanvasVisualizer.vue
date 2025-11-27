@@ -118,14 +118,6 @@ onMounted(() => {
                 let finalX = offsetX * GRID_WIDTH + posX;
                 let finalY = offsetY * GRID_WIDTH + posY;
 
-                const phase = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-
-                const driftX = Math.sin(time * CONFIG.DRIFT.SPEED + phase) * CONFIG.DRIFT.AMPLITUDE;
-                const driftY = Math.cos(time * CONFIG.DRIFT.SPEED + phase) * CONFIG.DRIFT.AMPLITUDE;
-
-                finalX += driftX;
-                finalY += driftY;
-
                 const distance = p2_distance(fixedX, fixedY, finalX, finalY) / 2 / (GRID_SIZE / 10);
 
                 const scale = Math.max(0, Math.min(1, (MAX_DISTANCE - distance) / (MAX_DISTANCE * 0.5)));
