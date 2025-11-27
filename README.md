@@ -2,8 +2,6 @@
 
 A real-time, interactive visualization of your windows using a dynamic, flowing grid.
 
-![Visualizer Preview](https://via.placeholder.com/800x450?text=Flowing+Grid+Visualizer)
-
 ## Overview
 
 This project tracks the position and dimensions of active Google Chrome windows and visualizes them as disturbances in a flowing, interactive grid. The grid features a modern dark aesthetic with neon gradients and organic, randomized drift effects.
