@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted } from 'vue';
 import { CONFIG } from '../config';
 import { useWebSocket } from '../composables/useWebSocket';
+import type { Vector2 } from '../types';
 
 const id = crypto.randomUUID();
 document.title = id;
@@ -11,39 +12,39 @@ const { message, connect } = useWebSocket(id);
 let resizeHandler: (() => void) | null = null;
 let animationFrameId: number | null = null;
 
-const p2_distance = (x1: number, y1: number, x2: number, y2: number) => {
-    return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
+const p2_distance = (p1: Vector2, p2: Vector2) => {
+    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 };
 
 function drawBullet(
     ctx: CanvasRenderingContext2D,
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
+    p1: Vector2,
+    p2: Vector2,
     scale: number = 2,
 ): void {
     if (scale < CONFIG.BULLET_MIN_SCALE) {
         return;
     }
 
-    const dx = x2 - x1;
-    const dy = y2 - y1;
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
     const offset = CONFIG.BULLET_OFFSET * scale;
-    const newX1 = distance > 0 ? x1 + (dx / distance) * offset : x1;
-    const newY1 = distance > 0 ? y1 + (dy / distance) * offset : y1;
+    const newPos: Vector2 = {
+        x: distance > 0 ? p1.x + (dx / distance) * offset : p1.x,
+        y: distance > 0 ? p1.y + (dy / distance) * offset : p1.y,
+    };
 
-    const gradient = ctx.createLinearGradient(x1, y1, newX1, newY1);
+    const gradient = ctx.createLinearGradient(p1.x, p1.y, newPos.x, newPos.y);
     gradient.addColorStop(0, CONFIG.COLORS.ACCENT_START);
     gradient.addColorStop(1, CONFIG.COLORS.ACCENT_END);
 
     ctx.strokeStyle = gradient;
     ctx.globalAlpha = Math.min(1, scale * 1.5);
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(newX1, newY1);
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(newPos.x, newPos.y);
     ctx.lineCap = 'round';
     ctx.lineWidth = CONFIG.BULLET_LINE_WIDTH * scale;
     ctx.stroke();
@@ -84,21 +85,19 @@ onMounted(() => {
     const GRID_WIDTH = GRID_SPACING * GRID_SIZE;
     const MAX_DISTANCE = CONFIG.MAX_DISTANCE;
 
-    let fixedX = 0;
-    let fixedY = 0;
-    let fixedGridX = 0;
-    let fixedGridY = 0;
+    let fixedPosition: Vector2 = { x: 0, y: 0 };
+    let fixedGridPosition: Vector2 = { x: 0, y: 0 };
 
     let time = 0;
 
     function loop() {
         time += 0.01;
 
-        fixedX += (message.x - fixedX) * INTERPOLATION_FACTOR;
-        fixedY += (message.y - fixedY) * INTERPOLATION_FACTOR;
+        fixedPosition.x += (message.x - fixedPosition.x) * INTERPOLATION_FACTOR;
+        fixedPosition.y += (message.y - fixedPosition.y) * INTERPOLATION_FACTOR;
 
-        fixedGridX += (message.gridX - fixedGridX) * INTERPOLATION_FACTOR;
-        fixedGridY += (message.gridY - fixedGridY) * INTERPOLATION_FACTOR;
+        fixedGridPosition.x += (message.gridX - fixedGridPosition.x) * INTERPOLATION_FACTOR;
+        fixedGridPosition.y += (message.gridY - fixedGridPosition.y) * INTERPOLATION_FACTOR;
 
         ctxRef.fillStyle = CONFIG.COLORS.BACKGROUND;
         ctxRef.fillRect(0, 0, canvasRef.width, canvasRef.height);
@@ -109,20 +108,26 @@ onMounted(() => {
 
         for (let x = 0; x < GRID_SIZE; x++) {
             for (let y = 0; y < GRID_SIZE; y++) {
-                const posX = fixedGridX + x * GRID_SPACING;
-                const posY = fixedGridY + y * GRID_SPACING;
+                const pos: Vector2 = {
+                    x: fixedGridPosition.x + x * GRID_SPACING,
+                    y: fixedGridPosition.y + y * GRID_SPACING,
+                };
 
-                const offsetX = Math.floor((halfGridWidth + fixedX - posX) / GRID_WIDTH);
-                const offsetY = Math.floor((halfGridWidth + fixedY - posY) / GRID_WIDTH);
+                const offset: Vector2 = {
+                    x: Math.floor((halfGridWidth + fixedPosition.x - pos.x) / GRID_WIDTH),
+                    y: Math.floor((halfGridWidth + fixedPosition.y - pos.y) / GRID_WIDTH)
+                };
 
-                let finalX = offsetX * GRID_WIDTH + posX;
-                let finalY = offsetY * GRID_WIDTH + posY;
+                let finalPos: Vector2 = {
+                    x: offset.x * GRID_WIDTH + pos.x,
+                    y: offset.y * GRID_WIDTH + pos.y,
+                };
 
-                const distance = p2_distance(fixedX, fixedY, finalX, finalY) / 2 / (GRID_SIZE / 10);
+                const distance = p2_distance(fixedPosition, finalPos) / 2 / (GRID_SIZE / 10);
 
                 const scale = Math.max(0, Math.min(1, (MAX_DISTANCE - distance) / (MAX_DISTANCE * 0.5)));
 
-                drawBullet(ctxRef, finalX, finalY, fixedX, fixedY, scale);
+                drawBullet(ctxRef, finalPos, fixedPosition, scale);
             }
         }
 
@@ -149,10 +154,15 @@ onUnmounted(() => {
     <canvas id="canvas"></canvas>
 </template>
 
-<style scoped>
+<style>
+html, body, #app {
+    margin: 0;
+    padding: 0;
+
+    overflow: hidden;
+}
+
 canvas {
-    width: 100vw;
-    height: 100vh;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 }
